@@ -1,0 +1,481 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+
+    <title>KHL POC Showcase</title>
+
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval'
+                     https://oc-cdn-public-oce.azureedge.net
+                     https://ocprodpublicocegs.blob.core.windows.net
+                     https://*.omnichannelengagementhub.com
+                     https://api.ipify.org
+                     https://ipapi.co;
+                   connect-src 'self'
+                     https://oc-cdn-public-oce.azureedge.net
+                     https://ocprodpublicocegs.blob.core.windows.net
+                     https://*.omnichannelengagementhub.com
+                     https://api.ipify.org
+                     https://yourtownau.sharepoint.com
+                     https://ipapi.co;
+                   style-src 'self' 'unsafe-inline'
+                     https://cdn.jsdelivr.net
+                     https://oc-cdn-public-oce.azureedge.net
+                     https://ocprodpublicocegs.blob.core.windows.net;
+                   img-src 'self' data: blob: https:
+                     https://oc-cdn-public-oce.azureedge.net
+                     https://ocprodpublicocegs.blob.core.windows.net
+                     https://*.omnichannelengagementhub.com
+                     https://kidshelpline.com.au
+                     https://yourtownau.sharepoint.com;
+                   font-src 'self' data:
+                     https://oc-cdn-public-oce.azureedge.net;
+                   frame-src 'self'
+                     https://*.omnichannelengagementhub.com
+                     https://oc-cdn-public-oce.azureedge.net;
+                   frame-ancestors 'self';
+                   worker-src 'self' blob:;">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="brand-khl lcw-hidden">
+    <div class="content-wrapper unlocked">
+        <div class="logo-container">
+            <img src="images/logo.png" alt="Kids Helpline Logo" />
+        </div>
+        <div class="container py-2 py-lg-3">
+            <div class="app-shell mx-auto">
+
+                <!-- POC SELECTOR -->
+                <section id="selectionSection" class="selection-section active">
+                    <div class="chat-form-shell">
+                        <div class="form-section-header mb-4">
+                            <h2 class="section-title">Select a POC</h2>
+                            <p class="section-text mb-0">
+                                Choose one option below and continue. The other option will be hidden.
+                            </p>
+                        </div>
+
+                        <div class="poc-options">
+
+                            <div class="poc-card selected" id="cardWebApp">
+                                <input type="radio" name="pocType" value="webapp" id="webappOption" checked />
+                                <label for="webappOption">
+                                    <strong>Web Application POC</strong>
+                                    <span>Form-based Kids Helpline pre-chat experience</span>
+                                </label>
+                            </div>
+
+                            <div class="poc-card" id="cardConversational">
+                                <input type="radio" name="pocType" value="conversational" id="convOption" />
+                                <label for="convOption">
+                                    <strong>Conversational KHL POC</strong>
+                                    <span>Conversational - KHL / POC4 widget experience</span>
+                                </label>
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="button" id="startPocBtn" class="btn primary-btn">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- WEB APPLICATION POC -->
+                <section id="webappSection" class="poc-section">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button type="button" id="backToSelectionFromWeb" class="btn secondary-btn">
+                            Back to selection
+                        </button>
+                    </div>
+
+                    <div class="chat-form-shell">
+                        <div class="progress-bar-wrap mb-4">
+                            <div class="progress progress-custom">
+                                <div class="progress-bar progress-bar-custom"
+                                     id="progressFill"
+                                     role="progressbar"
+                                     style="width: 50%;"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100"
+                                     aria-valuenow="50"></div>
+                            </div>
+                        </div>
+
+                        <div id="formErrorSummary"
+                             class="alert alert-danger form-error d-none"
+                             role="alert"></div>
+
+                        <!-- PAGE 1 -->
+                        <section id="page1" class="form-page active">
+                            <div class="form-section-header mb-4">
+                                <h2 class="section-title">
+                                    Welcome to Kids Helpline webchat counselling.
+                                </h2>
+                                <p class="section-text mb-0">
+                                    Your safety comes first. If you’re in danger right now, please call 000.
+                                    Filling out this form helps your counsellor support you. We just need what you’d like us to call you and your age.
+                                    The rest is optional. You can skip any you don't want to answer.
+                                </p>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="privacyConsent" class="field-title">Privacy / consent</label>
+                                    <div class="field-meta">Required</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <label class="consent-card">
+                                        <input type="checkbox" id="privacyConsent" />
+                                        <span>
+                                            Do you agree with the privacy statement and understand that the information you provide and conversation will be recorded and may be used for quality assurance or to create a file for ongoing support.
+                                            <a href="#" target="_blank" rel="noopener noreferrer">Read more here</a>.
+                                        </span>
+                                    </label>
+                                    <div class="form-text helper-text">
+                                        To connect with a counsellor you need to tick Yes.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="name" class="field-title">Name</label>
+                                    <div class="field-meta">Required</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="name"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="35"
+                                           placeholder="What is your name, or what nickname would you like to be known by?"
+                                           autocomplete="name" />
+                                    <div class="form-text helper-text">Maximum 35 characters.</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="age" class="field-title">Age</label>
+                                    <div class="field-meta">Required</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <select id="age" class="form-select form-select-lg khl-control">
+                                        <option value="">Please select</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9</option>
+                                        <option value="10">10</option>
+                                        <option value="11">11</option>
+                                        <option value="12">12</option>
+                                        <option value="13">13</option>
+                                        <option value="14">14</option>
+                                        <option value="15">15</option>
+                                        <option value="16">16</option>
+                                        <option value="17">17</option>
+                                        <option value="18">18</option>
+                                        <option value="19">19</option>
+                                        <option value="20">20</option>
+                                        <option value="21">21</option>
+                                        <option value="22">22</option>
+                                        <option value="23">23</option>
+                                        <option value="24">24</option>
+                                        <option value="25">25</option>
+                                        <option value="26+">26+</option>
+                                    </select>
+                                    <div class="form-text helper-text">How old are you?</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="pronouns" class="field-title">Pronouns</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="pronouns"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="20"
+                                           placeholder="What pronouns would you like us to use?" />
+                                    <div class="form-text helper-text">Maximum 20 characters.</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="gender" class="field-title">Gender</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <select id="gender" class="form-select form-select-lg khl-control">
+                                        <option value="">Please select</option>
+                                        <option value="Girl/woman">Girl/woman</option>
+                                        <option value="Boy/man">Boy/man</option>
+                                        <option value="Transgender boy/man">Transgender boy/man</option>
+                                        <option value="Transgender girl/woman">Transgender girl/woman</option>
+                                        <option value="Non-binary">Non-binary</option>
+                                        <option value="I use another word/description">I use another word/description</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                    </select>
+                                    <div class="form-text helper-text">Which gender best describes you?</div>
+                                </div>
+                            </div>
+
+                            <div id="genderOtherRow" class="row g-4 align-items-start mb-3 d-none">
+                                <div class="col-12 col-lg-4">
+                                    <label for="genderOther" class="field-title">Gender description</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="genderOther"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="35"
+                                           placeholder="What word/description do you use?" />
+                                    <div class="form-text helper-text">Maximum 35 characters.</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="button" id="nextBtn" class="btn primary-btn">
+                                    Next
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- PAGE 2 -->
+                        <section id="page2" class="form-page">
+                            <div class="form-section-header mb-4">
+                                <h2 class="section-title">A few more details</h2>
+                                <p class="section-text mb-0">
+                                    These questions are optional. Only share details that feel safe and private.
+                                </p>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="atsiOrigin" class="field-title">Aboriginal or Torres Strait Islander</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <select id="atsiOrigin" class="form-select form-select-lg khl-control">
+                                        <option value="">Please select</option>
+                                        <option value="Yes, Aboriginal">Yes, Aboriginal</option>
+                                        <option value="Yes, Torres Strait Islander">Yes, Torres Strait Islander</option>
+                                        <option value="Yes, both">Yes, both</option>
+                                        <option value="No">No</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
+                                    </select>
+                                    <div class="form-text helper-text">
+                                        Are you of Aboriginal or Torres Strait Islander origin?
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="culturalBackground" class="field-title">Cultural background</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="culturalBackground"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="35"
+                                           placeholder="What is your cultural background?" />
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="state" class="field-title">State</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <select id="state" class="form-select form-select-lg khl-control">
+                                        <option value="">Please select</option>
+                                        <option value="ACT">Australian Capital Territory (ACT)</option>
+                                        <option value="NSW">New South Wales (NSW)</option>
+                                        <option value="NT">Northern Territory (NT)</option>
+                                        <option value="QLD">Queensland (QLD)</option>
+                                        <option value="SA">South Australia (SA)</option>
+                                        <option value="TAS">Tasmania (TAS)</option>
+                                        <option value="VIC">Victoria (VIC)</option>
+                                        <option value="WA">Western Australia (WA)</option>
+                                    </select>
+                                    <div class="form-text helper-text">
+                                        Which state or territory are you in?
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="suburb" class="field-title">Suburb</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="suburb"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="35"
+                                           placeholder="Which suburb or town are you in?" />
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="postcode" class="field-title">Postcode</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="postcode"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="4"
+                                           inputmode="numeric"
+                                           placeholder="What postcode are you in?" />
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="phone" class="field-title">Phone</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="phone"
+                                           class="form-control form-control-lg khl-control"
+                                           placeholder="What is your phone number (if you have one)? Only share a number that's safe and private." />
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="email" class="field-title">Email</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="email"
+                                           id="email"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="100"
+                                           placeholder="What is your email address (if you have one). Only share one that is safe and private" />
+                                </div>
+                            </div>
+
+                            <div class="row g-4 align-items-start mb-3">
+                                <div class="col-12 col-lg-4">
+                                    <label for="requestedCounsellor" class="field-title">Requested counsellor</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <select id="requestedCounsellor" class="form-select form-select-lg khl-control">
+                                        <option value="">Please select</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                    <div class="form-text helper-text">
+                                        Is there a counsellor you would like to reconnect with?
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="requestedCounsellorNameRow" class="row g-4 align-items-start mb-3 d-none">
+                                <div class="col-12 col-lg-4">
+                                    <label for="requestedCounsellorName" class="field-title">Requested counsellor name</label>
+                                    <div class="field-meta">Optional</div>
+                                </div>
+                                <div class="col-12 col-lg-8">
+                                    <input type="text"
+                                           id="requestedCounsellorName"
+                                           class="form-control form-control-lg khl-control"
+                                           maxlength="15"
+                                           placeholder="What is their name?" />
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-4">
+                                <button type="button" id="backBtn" class="btn secondary-btn">
+                                    Back
+                                </button>
+                                <button type="button" id="submitBtn" class="btn primary-btn">
+                                    Submit
+                                </button>
+                            </div>
+                        </section>
+
+                        <section id="page3" class="form-page"></section>
+                    </div>
+                </section>
+
+                <!-- CONVERSATIONAL POC -->
+                <section id="conversationalSection" class="poc-section">
+                    <div class="split-layout">
+                        <!-- LEFT 60% -->
+                        <div class="knowledge-column">
+                            <div class="knowledge-inner">
+                                <div class="d-flex justify-content-end mb-3">
+                                    <button type="button" id="backToSelectionFromConversational" class="btn secondary-btn">
+                                        Back to selection
+                                    </button>
+                                </div>
+
+                                <div class="knowledge-panel">
+                                    <h2>How can we help?</h2>
+
+                                    <div class="article-card">
+                                        <h4>Feeling overwhelmed?</h4>
+                                        <p>It’s okay to feel this way. You can talk to a counsellor anytime.</p>
+                                    </div>
+
+                                    <div class="article-card">
+                                        <h4>Need someone to talk to?</h4>
+                                        <p>Our counsellors are here to listen and support you.</p>
+                                    </div>
+
+                                    <div class="article-card">
+                                        <h4>Safety first</h4>
+                                        <p>If you're in immediate danger, please call 000.</p>
+                                    </div>
+
+                                    <div class="article-card">
+                                        <h4>What happens in chat?</h4>
+                                        <p>You’ll be connected to a counsellor who will listen and support you confidentially.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT 40% -->
+                        <div class="chat-column">
+                            <div class="chat-column-inner" id="chatColumnInner"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="js/lcw-common.js"></script>
+    <script src="js/khl-utils.js"></script>
+    <script src="js/khl-prechat.js"></script>
+    <script src="js/conversational-khl.js"></script>
+    <script src="js/poc-selector.js"></script>
+</body>
+</html>

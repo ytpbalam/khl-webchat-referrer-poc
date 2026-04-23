@@ -1,0 +1,42 @@
+# Temporary files
+/tmp/
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio indexes / caches
+*.vsidx
+FileContentIndex/
+CopilotIndices/
+
+# Local database / cache files
+*.db
+*.db-shm
+*.db-wal
+
+# IIS Express local config
+applicationhost.config
+
+# Node modules (if added later)
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+build/
