@@ -644,9 +644,9 @@ document.addEventListener("DOMContentLoaded", () => {
         lastSdkInstance = null;
         lastWebAppContextPayload = null;
 
-        console.log("[WebApp] Initialising widget");
-        console.log("[WebApp] App ID:", WEBAPP_LCW_CONFIG.attributes["data-app-id"]);
-        console.log("[WebApp] Full config:", WEBAPP_LCW_CONFIG);
+        //console.log("[WebApp] Initialising widget");
+        //console.log("[WebApp] App ID:", WEBAPP_LCW_CONFIG.attributes["data-app-id"]);
+        //console.log("[WebApp] Full config:", WEBAPP_LCW_CONFIG);
 
         window.LCWCommon.loadWidget(WEBAPP_LCW_CONFIG, "webapp");
         setLCWVisibility(false);
