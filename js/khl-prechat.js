@@ -2,6 +2,7 @@ let lcwReady = false;
 let contextProviderSet = false;
 let lastSdkInstance = null;
 let lastWebAppContextPayload = null;
+let queueCapacityInterval = null;
 
 const QUEUE_CAPACITY_API_URL = "https://72924814d9a6efb3afb70927a578f1.ca.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9c1d804875634549a6c1b020480a1718/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=FqFrqDRCG0xeXXgvUhrLeWfQdOhYls7NQ3ybJsJ2xMc";
 
@@ -538,6 +539,11 @@ document.addEventListener("DOMContentLoaded", () => {
             "email", "requestedCounsellor", "requestedCounsellorName"
         ];
 
+        if (queueCapacityInterval) {
+            clearInterval(queueCapacityInterval);
+            queueCapacityInterval = null;
+        }
+
         const privacyConsent = document.getElementById("privacyConsent");
         if (privacyConsent) privacyConsent.checked = false;
 
@@ -616,6 +622,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error("LiveChat SDK startChat is not available.");
             }
 
+            if (queueCapacityInterval) {
+                clearInterval(queueCapacityInterval);
+                queueCapacityInterval = null;
+            }
+
             sdk.startChat({
                 customContext: contextPayload
             });
@@ -668,7 +679,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("[WebApp] Queue capacity check failed", error);
 
             return {
-                isQueueCapacityAvailable: true,
+                isQueueCapacityAvailable: false,
                 queueCurrentCount: 0,
                 queueMessage: "Capacity check unavailable"
             };
@@ -684,6 +695,11 @@ document.addEventListener("DOMContentLoaded", () => {
         setLCWVisibility(false);
         setFormVisibility(false);
         clearErrors();
+
+        if (queueCapacityInterval) {
+            clearInterval(queueCapacityInterval);
+            queueCapacityInterval = null;
+        }
 
         const capacity = await checkQueueCapacity();
 
@@ -716,10 +732,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
             return;
         }
+
         window.LCWCommon.loadWidget(WEBAPP_LCW_CONFIG, "webapp");
         setLCWVisibility(false);
         setFormVisibility(true);
         showPage(page1, 1);
+
+        queueCapacityInterval = setInterval(async () => {
+            const latestCapacity = await checkQueueCapacity();
+
+            console.log("[WebApp] Queue capacity recheck:", latestCapacity);
+
+            if (!latestCapacity.isQueueCapacityAvailable) {
+                clearInterval(queueCapacityInterval);
+                queueCapacityInterval = null;
+
+                setLCWVisibility(false);
+                setFormVisibility(false);
+
+                alert(
+                    "Our counsellors are currently supporting the maximum number of young people overnight.\n\n" +
+                    "Please try again shortly.\n\n" +
+                    "If you are unsafe or in immediate danger, please call 000."
+                );
+
+                if (typeof window.LCWCommon?.cleanupWidget === "function") {
+                    window.LCWCommon.cleanupWidget();
+                }
+
+                const selectionSection = document.getElementById("selectionSection");
+                const webappSection = document.getElementById("webappSection");
+                const conversationalSection = document.getElementById("conversationalSection");
+
+                selectionSection?.classList.add("active");
+                webappSection?.classList.remove("active");
+                conversationalSection?.classList.remove("active");
+
+                document.body.classList.remove("brand-conversational");
+                document.body.classList.remove("conversational-fullscreen");
+                document.body.classList.add("brand-khl");
+                document.body.classList.add("lcw-hidden");
+            }
+        }, 5000);
     }
 
     window.initWebAppPoc = initWebAppPoc;
