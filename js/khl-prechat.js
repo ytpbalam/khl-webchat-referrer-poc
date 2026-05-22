@@ -642,6 +642,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkQueueCapacity() {
         try {
+            console.log("[WebApp] Calling Queue Capacity API...");
+
             const response = await fetch(QUEUE_CAPACITY_API_URL, {
                 method: "POST",
                 headers: {
@@ -652,11 +654,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
+            console.log("[WebApp] Queue API response status:", response.status);
+
             if (!response.ok) {
                 throw new Error(`Queue capacity API failed: ${response.status}`);
             }
 
-            return await response.json();
+            const result = await response.json();
+            console.log("[WebApp] Queue capacity result:", result);
+
+            return result;
         } catch (error) {
             console.error("[WebApp] Queue capacity check failed", error);
 
@@ -680,6 +687,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const capacity = await checkQueueCapacity();
 
+        console.log("[WebApp] initWebAppPoc started one");
+
         if (!capacity.isQueueCapacityAvailable) {
             setFormVisibility(true);
             showPage(page1, 1);
@@ -688,7 +697,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             return;
         }
-
+        console.log("[WebApp] initWebAppPoc started two");
         window.LCWCommon.loadWidget(WEBAPP_LCW_CONFIG, "webapp");
         setLCWVisibility(false);
         setFormVisibility(true);
@@ -708,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toggleGenderOther();
     toggleRequestedCounsellorName();
-    showPage(page1, 1);
+    setFormVisibility(false);
     setLCWVisibility(false);
 
     window.addEventListener("khl:lcwReady", (e) => {
