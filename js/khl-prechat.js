@@ -687,17 +687,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const capacity = await checkQueueCapacity();
 
-        console.log("[WebApp] initWebAppPoc started one");
-
         if (!capacity.isQueueCapacityAvailable) {
-            setFormVisibility(true);
-            showPage(page1, 1);
-            showError(
-                "Our counsellors are currently supporting the maximum number of young people overnight. Please try again shortly. If you are unsafe or in immediate danger, please call 000."
+            setLCWVisibility(false);
+            setFormVisibility(false);
+
+            alert(
+                "Our counsellors are currently supporting the maximum number of young people overnight.\n\n" +
+                "Please try again shortly.\n\n" +
+                "If you are unsafe or in immediate danger, please call 000."
             );
+
+            if (typeof window.LCWCommon?.cleanupWidget === "function") {
+                window.LCWCommon.cleanupWidget();
+            }
+
+            const selectionSection = document.getElementById("selectionSection");
+            const webappSection = document.getElementById("webappSection");
+            const conversationalSection = document.getElementById("conversationalSection");
+
+            selectionSection?.classList.add("active");
+            webappSection?.classList.remove("active");
+            conversationalSection?.classList.remove("active");
+
+            document.body.classList.remove("brand-conversational");
+            document.body.classList.remove("conversational-fullscreen");
+            document.body.classList.add("brand-khl");
+            document.body.classList.add("lcw-hidden");
+
             return;
         }
-        console.log("[WebApp] initWebAppPoc started two");
         window.LCWCommon.loadWidget(WEBAPP_LCW_CONFIG, "webapp");
         setLCWVisibility(false);
         setFormVisibility(true);
