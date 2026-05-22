@@ -3,6 +3,8 @@ let contextProviderSet = false;
 let lastSdkInstance = null;
 let lastWebAppContextPayload = null;
 
+const QUEUE_CAPACITY_API_URL = "https://72924814d9a6efb3afb70927a578f1.ca.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9c1d804875634549a6c1b020480a1718/triggers/manual/paths/invoke?api-version=1";
+
 const WEBAPP_LCW_CONFIG = {
     id: "Microsoft_Omnichannel_LCWidget",
     primarySrc:
@@ -638,15 +640,54 @@ document.addEventListener("DOMContentLoaded", () => {
         submitBtn.textContent = isBusy ? "Submitting..." : "Submit";
     }
 
-    function initWebAppPoc() {
+    async function checkQueueCapacity() {
+        try {
+            const response = await fetch(QUEUE_CAPACITY_API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    source: "webapp-poc"
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Queue capacity API failed: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error("[WebApp] Queue capacity check failed", error);
+
+            return {
+                isQueueCapacityAvailable: true,
+                queueCurrentCount: 0,
+                queueMessage: "Capacity check unavailable"
+            };
+        }
+    }
+
+    async function initWebAppPoc() {
         lcwReady = false;
         contextProviderSet = false;
         lastSdkInstance = null;
         lastWebAppContextPayload = null;
 
-        //console.log("[WebApp] Initialising widget");
-        //console.log("[WebApp] App ID:", WEBAPP_LCW_CONFIG.attributes["data-app-id"]);
-        //console.log("[WebApp] Full config:", WEBAPP_LCW_CONFIG);
+        setLCWVisibility(false);
+        setFormVisibility(false);
+        clearErrors();
+
+        const capacity = await checkQueueCapacity();
+
+        if (!capacity.isQueueCapacityAvailable) {
+            setFormVisibility(true);
+            showPage(page1, 1);
+            showError(
+                "Our counsellors are currently supporting the maximum number of young people overnight. Please try again shortly. If you are unsafe or in immediate danger, please call 000."
+            );
+            return;
+        }
 
         window.LCWCommon.loadWidget(WEBAPP_LCW_CONFIG, "webapp");
         setLCWVisibility(false);
