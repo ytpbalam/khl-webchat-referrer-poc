@@ -3,7 +3,7 @@ let contextProviderSet = false;
 let lastSdkInstance = null;
 let lastWebAppContextPayload = null;
 
-const QUEUE_CAPACITY_API_URL = "https://72924814d9a6efb3afb70927a578f1.ca.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9c1d804875634549a6c1b020480a1718/triggers/manual/paths/invoke?api-version=1";
+const QUEUE_CAPACITY_API_URL = "https://72924814d9a6efb3afb70927a578f1.ca.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9c1d804875634549a6c1b020480a1718/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=FqFrqDRCG0xeXXgvUhrLeWfQdOhYls7NQ3ybJsJ2xMc";
 
 const WEBAPP_LCW_CONFIG = {
     id: "Microsoft_Omnichannel_LCWidget",
