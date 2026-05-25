@@ -686,6 +686,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function showQueueCapacityModal() {
+
+        const modalElement = document.getElementById("queueCapacityModal");
+
+        if (!modalElement) {
+            console.error("[WebApp] Queue capacity modal not found");
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalElement);
+
+        modal.show();
+
+        const handleClose = () => {
+
+            modal.hide();
+
+            if (typeof window.LCWCommon?.cleanupWidget === "function") {
+                window.LCWCommon.cleanupWidget();
+            }
+
+            const selectionSection = document.getElementById("selectionSection");
+            const webappSection = document.getElementById("webappSection");
+            const conversationalSection = document.getElementById("conversationalSection");
+
+            selectionSection?.classList.add("active");
+            webappSection?.classList.remove("active");
+            conversationalSection?.classList.remove("active");
+
+            document.body.classList.remove("brand-conversational");
+            document.body.classList.remove("conversational-fullscreen");
+            document.body.classList.add("brand-khl");
+            document.body.classList.add("lcw-hidden");
+        };
+
+        document.getElementById("queueCapacityCancelBtn").onclick = handleClose;
+        document.getElementById("queueCapacityContinueBtn").onclick = handleClose;
+        document.getElementById("queueCapacityCloseBtn").onclick = handleClose;
+    }
+
     async function initWebAppPoc() {
         lcwReady = false;
         contextProviderSet = false;
@@ -707,11 +747,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setLCWVisibility(false);
             setFormVisibility(false);
 
-            alert(
-                "Our counsellors are currently supporting the maximum number of young people overnight.\n\n" +
-                "Please try again shortly.\n\n" +
-                "If you are unsafe or in immediate danger, please call 000."
-            );
+            showQueueCapacityModal();
 
             if (typeof window.LCWCommon?.cleanupWidget === "function") {
                 window.LCWCommon.cleanupWidget();
@@ -750,11 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 setLCWVisibility(false);
                 setFormVisibility(false);
 
-                alert(
-                    "Our counsellors are currently supporting the maximum number of young people overnight.\n\n" +
-                    "Please try again shortly.\n\n" +
-                    "If you are unsafe or in immediate danger, please call 000."
-                );
+                showQueueCapacityModal();
 
                 if (typeof window.LCWCommon?.cleanupWidget === "function") {
                     window.LCWCommon.cleanupWidget();
