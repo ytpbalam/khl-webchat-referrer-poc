@@ -687,24 +687,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showQueueCapacityModal() {
-
         console.log("[WebApp] showQueueCapacityModal called");
-        console.log("[WebApp] Bootstrap exists:", typeof bootstrap !== "undefined");
-        console.log("[WebApp] Modal element exists:", !!document.getElementById("queueCapacityModal"));
 
         const modalElement = document.getElementById("queueCapacityModal");
 
-        if (!modalElement) {
-            console.error("[WebApp] Queue capacity modal not found");
+        console.log("[WebApp] Bootstrap exists:", typeof bootstrap !== "undefined");
+        console.log("[WebApp] Modal element exists:", !!modalElement);
+
+        if (!modalElement || typeof bootstrap === "undefined") {
+            console.error("[WebApp] Queue capacity modal or Bootstrap not found");
+
+            alert(
+                "Our counsellors are currently supporting the maximum number of young people overnight.\n\n" +
+                "Please try again shortly.\n\n" +
+                "If you are unsafe or in immediate danger, please call 000."
+            );
+
             return;
         }
 
-        const modal = new bootstrap.Modal(modalElement);
-
-        modal.show();
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
         const handleClose = () => {
-
             modal.hide();
 
             if (typeof window.LCWCommon?.cleanupWidget === "function") {
@@ -725,13 +729,15 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.classList.add("lcw-hidden");
         };
 
-        console.log("[WebApp] showQueueCapacityModal called");
-        console.log("[WebApp] Bootstrap exists:", typeof bootstrap !== "undefined");
-        console.log("[WebApp] Modal element exists:", !!document.getElementById("queueCapacityModal"));
+        const cancelBtn = document.getElementById("queueCapacityCancelBtn");
+        const continueBtn = document.getElementById("queueCapacityContinueBtn");
+        const closeBtn = document.getElementById("queueCapacityCloseBtn");
 
-        document.getElementById("queueCapacityCancelBtn").onclick = handleClose;
-        document.getElementById("queueCapacityContinueBtn").onclick = handleClose;
-        document.getElementById("queueCapacityCloseBtn").onclick = handleClose;
+        if (cancelBtn) cancelBtn.onclick = handleClose;
+        if (continueBtn) continueBtn.onclick = handleClose;
+        if (closeBtn) closeBtn.onclick = handleClose;
+
+        modal.show();
     }
 
     async function initWebAppPoc() {
