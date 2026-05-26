@@ -688,6 +688,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showQueueCapacityModal() {
 
+        console.log("[WebApp] showQueueCapacityModal called");
+        console.log("[WebApp] Bootstrap exists:", typeof bootstrap !== "undefined");
+        console.log("[WebApp] Modal element exists:", !!document.getElementById("queueCapacityModal"));
+
         const modalElement = document.getElementById("queueCapacityModal");
 
         if (!modalElement) {
@@ -720,6 +724,10 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.classList.add("brand-khl");
             document.body.classList.add("lcw-hidden");
         };
+
+        console.log("[WebApp] showQueueCapacityModal called");
+        console.log("[WebApp] Bootstrap exists:", typeof bootstrap !== "undefined");
+        console.log("[WebApp] Modal element exists:", !!document.getElementById("queueCapacityModal"));
 
         document.getElementById("queueCapacityCancelBtn").onclick = handleClose;
         document.getElementById("queueCapacityContinueBtn").onclick = handleClose;
