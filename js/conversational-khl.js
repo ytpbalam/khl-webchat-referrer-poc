@@ -371,45 +371,7 @@ window.addEventListener("khl:chatClosed", (e) => {
 });
 
 // =====================================================
-// Conversational KHL - LCW / Copilot Event Logger
-// Use this first to inspect events before applying rules
-// =====================================================
-
-window.KHLConversationDebug = true;
-
-function logConversationalEvent(eventName, e) {
-    if (!window.KHLConversationDebug) return;
-
-    const detail = e?.detail || {};
-
-    console.group(`[KHL Conversational Event] ${eventName}`);
-    console.log("Full event:", e);
-    console.log("Detail:", detail);
-    console.log("Text:", detail?.text);
-    console.log("Message type:", e?.msgType || detail?.messageType);
-    console.log("Tags:", e?.tags || detail?.tags || detail?.channelData?.tags);
-    console.log("Channel data:", detail?.channelData);
-    console.groupEnd();
-}
-
-[
-    "lcw:ready",
-    "lcw:startChat",
-    "lcw:onMessageReceived",
-    "lcw:onMessageSent",
-    "lcw:onMinimize",
-    "lcw:onMaximize",
-    "lcw:onClose",
-    "lcw:closeChat",
-    "lcw:chatClosed"
-].forEach((eventName) => {
-    window.addEventListener(eventName, (e) => {
-        logConversationalEvent(eventName, e);
-    });
-});
-
-// =====================================================
-// Conversational KHL - Name Character Limit
+// Conversational KHL - Preferred Name Character Limit
 // =====================================================
 
 const KHL_LIMITS = {
@@ -418,12 +380,51 @@ const KHL_LIMITS = {
 
 let currentValidationField = null;
 
-function applyTextareaLimit(maxLength) {
+function findLcwInputInDocument(doc) {
+    if (!doc) return null;
 
-    const input =
-        document.querySelector("textarea") ||
-        document.querySelector('[contenteditable="true"]') ||
-        document.querySelector('[role="textbox"]');
+    return (
+        doc.querySelector("textarea") ||
+        doc.querySelector('[contenteditable="true"]') ||
+        doc.querySelector('[role="textbox"]') ||
+        doc.querySelector('input[type="text"]')
+    );
+}
+
+function findLcwInput() {
+    let input = findLcwInputInDocument(document);
+
+    if (input) {
+        console.log("LCW input found in parent document");
+        return input;
+    }
+
+    const iframes = document.querySelectorAll("iframe");
+
+    console.log("ALL IFRAMES:", iframes);
+
+    for (const iframe of iframes) {
+        try {
+            const iframeDoc =
+                iframe.contentDocument ||
+                iframe.contentWindow?.document;
+
+            input = findLcwInputInDocument(iframeDoc);
+
+            if (input) {
+                console.log("LCW input found inside iframe:", iframe);
+                return input;
+            }
+        } catch (error) {
+            console.warn("Cannot access iframe due to cross-origin restriction:", iframe, error);
+        }
+    }
+
+    return null;
+}
+
+function applyTextareaLimit(maxLength) {
+    const input = findLcwInput();
 
     if (!input) {
         console.warn("No LCW input found");
@@ -433,9 +434,13 @@ function applyTextareaLimit(maxLength) {
     console.log("LCW input found:", input);
     console.log("INPUT HTML:", input.outerHTML);
 
-    // textarea support
-    if (input.tagName === "TEXTAREA") {
+    if (input.dataset.khlLimitApplied === String(maxLength)) {
+        return true;
+    }
 
+    input.dataset.khlLimitApplied = String(maxLength);
+
+    if (input.tagName === "TEXTAREA" || input.tagName === "INPUT") {
         input.setAttribute("maxlength", maxLength);
 
         input.addEventListener("input", () => {
@@ -443,22 +448,14 @@ function applyTextareaLimit(maxLength) {
                 input.value = input.value.substring(0, maxLength);
             }
         });
-
-    }
-    else {
-
-        // contenteditable / role=textbox support
+    } else {
         input.addEventListener("input", () => {
-
             let text = input.innerText || input.textContent || "";
 
             if (text.length > maxLength) {
-
                 text = text.substring(0, maxLength);
-
                 input.innerText = text;
 
-                // move cursor to end
                 const range = document.createRange();
                 const sel = window.getSelection();
 
@@ -468,47 +465,35 @@ function applyTextareaLimit(maxLength) {
                 sel.removeAllRanges();
                 sel.addRange(range);
             }
-
         });
     }
-    console.log("INPUT HTML:", input.outerHTML);
-    console.log(`Character limit applied: ${maxLength}`);
 
+    console.log(`Character limit applied: ${maxLength}`);
     return true;
 }
 
 function startValidationWatcher(fieldName, maxLength) {
-
     currentValidationField = fieldName;
 
     const retryInterval = setInterval(() => {
-
         const applied = applyTextareaLimit(maxLength);
 
         if (applied) {
             clearInterval(retryInterval);
         }
-
     }, 500);
 
-    // safety cleanup
     setTimeout(() => {
         clearInterval(retryInterval);
     }, 10000);
 }
 
-
 window.addEventListener("lcw:onMessageReceived", (e) => {
-
     const text = (e?.detail?.text || "").toLowerCase();
 
     console.log("Bot message:", text);
 
-    // Preferred Name Question
-    if (
-        text.includes("what should we call you")
-    ) {
-
+    if (text.includes("what should we call you")) {
         console.log("Applying Preferred Name validation");
 
         startValidationWatcher(
@@ -516,5 +501,4 @@ window.addEventListener("lcw:onMessageReceived", (e) => {
             KHL_LIMITS.preferredName
         );
     }
-
 });
