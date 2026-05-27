@@ -371,7 +371,7 @@ window.addEventListener("khl:chatClosed", (e) => {
 });
 
 // =====================================================
-// HARD BLOCK SEND BEFORE MESSAGE REACHES BOT
+// HARD BLOCK / TEXTAREA LIMIT TEST - BEFORE MESSAGE REACHES BOT
 // =====================================================
 
 const KHL_LIMITS = {
@@ -380,12 +380,165 @@ const KHL_LIMITS = {
 
 let currentValidationField = null;
 let khlSendInterceptorAttached = false;
+let khlInputInterceptorAttached = false;
+
+// =====================================================
+// 1. Get LCW iframe document
+// =====================================================
+
+function getLcwIframeDocument() {
+    const iframe = document.querySelector("#Microsoft_Omnichannel_LCWidget_Chat_Iframe_Window");
+
+    if (!iframe) {
+        console.warn("LCW iframe not found");
+        return null;
+    }
+
+    try {
+        return iframe.contentDocument || iframe.contentWindow?.document;
+    } catch (error) {
+        console.warn("Cannot access LCW iframe document", error);
+        return null;
+    }
+}
+
+// =====================================================
+// 2. Find actual LCW message input / textarea
+// =====================================================
+
+function findLcwMessageInput() {
+    const iframeDoc = getLcwIframeDocument();
+
+    if (!iframeDoc) return null;
+
+    const candidates = [
+        ...iframeDoc.querySelectorAll("textarea"),
+        ...iframeDoc.querySelectorAll('[contenteditable="true"]'),
+        ...iframeDoc.querySelectorAll('[role="textbox"]'),
+        ...iframeDoc.querySelectorAll('input[type="text"]')
+    ];
+
+    console.log("LCW textarea candidates:", candidates);
+
+    return candidates.find((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    }) || null;
+}
+
+// =====================================================
+// 3. Get current input value
+// =====================================================
+
+function getInputText(input) {
+    if (!input) return "";
+
+    return (
+        input.value ||
+        input.innerText ||
+        input.textContent ||
+        ""
+    );
+}
+
+// =====================================================
+// 4. Set current input value
+// =====================================================
+
+function setInputText(input, value) {
+    if (!input) return;
+
+    if ("value" in input) {
+        input.value = value;
+    } else {
+        input.innerText = value;
+        input.textContent = value;
+    }
+
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+// =====================================================
+// 5. Attach textarea-level restriction
+// =====================================================
+
+function attachInputInterceptor() {
+    if (khlInputInterceptorAttached) return true;
+
+    const input = findLcwMessageInput();
+
+    if (!input) {
+        console.warn("LCW message input not found yet");
+        return false;
+    }
+
+    console.log("LCW message input found:", input);
+    console.log("LCW message input HTML:", input.outerHTML);
+
+    input.dataset.khlInputInterceptorAttached = "true";
+
+    input.addEventListener("beforeinput", (e) => {
+        if (currentValidationField !== "Global.clientPreferredName") return;
+
+        const currentText = getInputText(input);
+        const incomingText = e.data || "";
+
+        if ((currentText + incomingText).length > KHL_LIMITS.preferredName) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            alert("Please enter 35 characters or fewer.");
+            console.warn("Blocked beforeinput over 35 characters");
+        }
+    }, true);
+
+    input.addEventListener("paste", (e) => {
+        if (currentValidationField !== "Global.clientPreferredName") return;
+
+        const currentText = getInputText(input);
+        const pastedText = e.clipboardData?.getData("text") || "";
+
+        if ((currentText + pastedText).length > KHL_LIMITS.preferredName) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            const allowed = KHL_LIMITS.preferredName - currentText.length;
+
+            if (allowed > 0) {
+                setInputText(input, currentText + pastedText.substring(0, allowed));
+            }
+
+            alert("Please enter 35 characters or fewer.");
+            console.warn("Blocked paste over 35 characters");
+        }
+    }, true);
+
+    input.addEventListener("input", () => {
+        if (currentValidationField !== "Global.clientPreferredName") return;
+
+        const text = getInputText(input);
+
+        if (text.length > KHL_LIMITS.preferredName) {
+            setInputText(input, text.substring(0, KHL_LIMITS.preferredName));
+            console.warn("Trimmed input back to 35 characters");
+        }
+    }, true);
+
+    khlInputInterceptorAttached = true;
+    console.log("LCW textarea/input interceptor attached");
+
+    return true;
+}
+
+// =====================================================
+// 6. Attach SDK send interceptor fallback
+// =====================================================
 
 function attachSendInterceptor() {
-
-    if (khlSendInterceptorAttached) {
-        return;
-    }
+    if (khlSendInterceptorAttached) return;
 
     const sdk = window.Microsoft?.Omnichannel?.LiveChatWidget?.SDK;
 
@@ -394,7 +547,6 @@ function attachSendInterceptor() {
         return;
     }
 
-    // Find internal send function
     const originalSendMessage =
         sdk.sendMessage ||
         sdk.postMessage ||
@@ -405,89 +557,93 @@ function attachSendInterceptor() {
         return;
     }
 
-    console.log("LCW send interceptor attached");
-
     const interceptedSend = function (...args) {
-
         let messageText = "";
 
         try {
-
             const firstArg = args[0];
 
             if (typeof firstArg === "string") {
                 messageText = firstArg;
-            }
-            else if (firstArg?.text) {
+            } else if (firstArg?.text) {
                 messageText = firstArg.text;
-            }
-            else if (firstArg?.message) {
+            } else if (firstArg?.message) {
                 messageText = firstArg.message;
             }
-
-        } catch (e) {
-            console.warn("Could not inspect outgoing message", e);
+        } catch (error) {
+            console.warn("Could not inspect outgoing message", error);
         }
 
         console.log("Outgoing message:", messageText);
-
-        // =====================================================
-        // Preferred Name Validation
-        // =====================================================
 
         if (
             currentValidationField === "Global.clientPreferredName" &&
             messageText.length > KHL_LIMITS.preferredName
         ) {
-
             alert("Please enter 35 characters or fewer.");
-
-            console.warn("Blocked outgoing message");
-
+            console.warn("Blocked outgoing message through SDK interceptor");
             return Promise.resolve(false);
         }
 
         return originalSendMessage.apply(sdk, args);
     };
 
-    if (sdk.sendMessage) {
-        sdk.sendMessage = interceptedSend;
-    }
-
-    if (sdk.postMessage) {
-        sdk.postMessage = interceptedSend;
-    }
-
-    if (sdk._sendMessage) {
-        sdk._sendMessage = interceptedSend;
-    }
+    if (sdk.sendMessage) sdk.sendMessage = interceptedSend;
+    if (sdk.postMessage) sdk.postMessage = interceptedSend;
+    if (sdk._sendMessage) sdk._sendMessage = interceptedSend;
 
     khlSendInterceptorAttached = true;
+    console.log("LCW SDK send interceptor attached");
 }
 
-window.addEventListener("khl:lcwReady", () => {
+// =====================================================
+// 7. Watcher to attach interceptors
+// =====================================================
+
+function startLcwInputWatcher() {
+    const interval = setInterval(() => {
+        attachInputInterceptor();
+        attachSendInterceptor();
+
+        if (khlInputInterceptorAttached || khlSendInterceptorAttached) {
+            clearInterval(interval);
+        }
+    }, 500);
 
     setTimeout(() => {
-        attachSendInterceptor();
-    }, 3000);
+        clearInterval(interval);
+    }, 10000);
+}
 
+// =====================================================
+// 8. LCW ready
+// =====================================================
+
+window.addEventListener("khl:lcwReady", () => {
+    setTimeout(() => {
+        startLcwInputWatcher();
+    }, 2000);
 });
 
-window.addEventListener("lcw:onMessageReceived", (e) => {
+// =====================================================
+// 9. Activate validation based on Copilot question
+// =====================================================
 
+window.addEventListener("lcw:onMessageReceived", (e) => {
     const text = (e?.detail?.text || "").toLowerCase();
 
     console.log("Bot message:", text);
 
     if (text.includes("what should we call you")) {
-
         currentValidationField = "Global.clientPreferredName";
+        khlInputInterceptorAttached = false;
 
         console.log("Preferred Name validation active");
+
+        startLcwInputWatcher();
     }
 
     if (text.includes("how old are you")) {
-
         currentValidationField = null;
 
         console.log("Preferred Name validation cleared");
