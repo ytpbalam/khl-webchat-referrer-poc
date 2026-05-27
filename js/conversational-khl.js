@@ -371,7 +371,7 @@ window.addEventListener("khl:chatClosed", (e) => {
 });
 
 // =====================================================
-// Conversational KHL - Preferred Name Character Limit
+// Prevent sending Preferred Name if over 35 characters
 // =====================================================
 
 const KHL_LIMITS = {
@@ -380,190 +380,121 @@ const KHL_LIMITS = {
 
 let currentValidationField = null;
 
-function isVisibleElement(el) {
-    if (!el) return false;
+function getChatIframeDocument() {
+    const iframe = document.querySelector("#Microsoft_Omnichannel_LCWidget_Chat_Iframe_Window");
 
-    const rect = el.getBoundingClientRect();
-    const style = window.getComputedStyle(el);
+    if (!iframe) return null;
 
-    return (
-        rect.width > 0 &&
-        rect.height > 0 &&
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        style.opacity !== "0"
-    );
+    try {
+        return iframe.contentDocument || iframe.contentWindow?.document;
+    } catch (e) {
+        console.warn("Cannot access LCW iframe document", e);
+        return null;
+    }
 }
 
-function isWebAppFormField(el) {
-    if (!el) return true;
-
-    return (
-        el.id === "name" ||
-        el.classList.contains("khl-control") ||
-        !!el.closest("#webappSection") ||
-        !!el.closest("#selectionSection")
-    );
-}
-
-function findLcwInputInDocument(doc) {
-    if (!doc) return null;
-
-    const candidates = [
+function getMessageText(doc) {
+    const possibleInputs = [
         ...doc.querySelectorAll("textarea"),
         ...doc.querySelectorAll('[contenteditable="true"]'),
         ...doc.querySelectorAll('[role="textbox"]'),
-        ...doc.querySelectorAll('input[placeholder*="Type your message"]'),
-        ...doc.querySelectorAll('input[type="text"]')
+        ...doc.querySelectorAll("input")
     ];
 
-    const validCandidates = candidates.filter((el) => {
-        if (!isVisibleElement(el)) return false;
-        if (isWebAppFormField(el)) return false;
+    for (const el of possibleInputs) {
+        const value = el.value || el.innerText || el.textContent || "";
 
-        return true;
-    });
-
-    console.log("LCW input candidates:", validCandidates);
-
-    return validCandidates[0] || null;
-}
-
-function findLcwInput() {
-    let input = findLcwInputInDocument(document);
-
-    if (input) {
-        console.log("LCW input found in parent document");
-        return input;
-    }
-
-    const iframes = document.querySelectorAll("iframe");
-
-    console.log("ALL IFRAMES:", iframes);
-
-    for (const iframe of iframes) {
-        try {
-            const iframeDoc =
-                iframe.contentDocument ||
-                iframe.contentWindow?.document;
-
-            input = findLcwInputInDocument(iframeDoc);
-
-            if (input) {
-                console.log("LCW input found inside iframe:", iframe);
-                return input;
-            }
-        } catch (error) {
-            console.warn("Cannot access iframe due to cross-origin restriction:", iframe, error);
+        if (value.trim()) {
+            return value.trim();
         }
     }
 
-    return null;
+    return "";
 }
 
-function applyTextareaLimit(maxLength) {
-    const input = findLcwInput();
+function isPreferredNameTooLong(doc) {
+    if (currentValidationField !== "Global.clientPreferredName") return false;
 
-    if (!input) {
-        console.warn("No LCW message input found");
+    const message = getMessageText(doc);
+    return message.length > KHL_LIMITS.preferredName;
+}
+
+function blockSendIfInvalid(e) {
+    const doc = getChatIframeDocument();
+
+    if (!doc) return;
+
+    if (isPreferredNameTooLong(doc)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        alert("Please enter 35 characters or fewer.");
+        return false;
+    }
+}
+
+function attachLcwSendBlocker() {
+    const doc = getChatIframeDocument();
+
+    if (!doc) {
+        console.warn("LCW iframe document not ready");
         return false;
     }
 
-    console.log("LCW message input found:", input);
-    console.log("INPUT HTML:", input.outerHTML);
-
-    if (input.dataset.khlLimitApplied === String(maxLength)) {
+    if (doc.body?.dataset.khlSendBlockerAttached === "true") {
         return true;
     }
 
-    input.dataset.khlLimitApplied = String(maxLength);
+    doc.body.dataset.khlSendBlockerAttached = "true";
 
-    if (input.tagName === "TEXTAREA" || input.tagName === "INPUT") {
-        input.setAttribute("maxlength", maxLength);
+    // Block Enter key send
+    doc.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            blockSendIfInvalid(e);
+        }
+    }, true);
 
-        input.addEventListener("input", () => {
-            if (input.value && input.value.length > maxLength) {
-                input.value = input.value.substring(0, maxLength);
+    // Block send button click
+    doc.addEventListener("click", (e) => {
+        const target = e.target;
 
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-                input.dispatchEvent(new Event("change", { bubbles: true }));
-            }
-        });
-    } else {
-        input.addEventListener("input", () => {
-            let text = input.innerText || input.textContent || "";
+        const isSendButton =
+            target.closest("button") ||
+            target.closest('[role="button"]') ||
+            target.closest('[aria-label*="Send"]') ||
+            target.closest('[title*="Send"]');
 
-            if (text.length > maxLength) {
-                text = text.substring(0, maxLength);
-                input.innerText = text;
+        if (isSendButton) {
+            blockSendIfInvalid(e);
+        }
+    }, true);
 
-                const range = document.createRange();
-                const sel = window.getSelection();
-
-                range.selectNodeContents(input);
-                range.collapse(false);
-
-                sel.removeAllRanges();
-                sel.addRange(range);
-
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-                input.dispatchEvent(new Event("change", { bubbles: true }));
-            }
-        });
-    }
-
-    console.log(`Character limit applied to LCW message box: ${maxLength}`);
+    console.log("LCW send blocker attached");
     return true;
 }
 
-function startValidationWatcher(fieldName, maxLength) {
-    currentValidationField = fieldName;
+function startSendBlockerWatcher() {
+    const interval = setInterval(() => {
+        const attached = attachLcwSendBlocker();
 
-    const retryInterval = setInterval(() => {
-        const applied = applyTextareaLimit(maxLength);
-
-        if (applied) {
-            clearInterval(retryInterval);
+        if (attached) {
+            clearInterval(interval);
         }
     }, 500);
 
-    setTimeout(() => {
-        clearInterval(retryInterval);
-    }, 10000);
+    setTimeout(() => clearInterval(interval), 10000);
 }
 
 window.addEventListener("lcw:onMessageReceived", (e) => {
     const text = (e?.detail?.text || "").toLowerCase();
 
-    console.log("Bot message:", text);
-
     if (text.includes("what should we call you")) {
-        console.log("Applying Preferred Name validation");
-
-        startValidationWatcher(
-            "Global.clientPreferredName",
-            KHL_LIMITS.preferredName
-        );
-    }
-});
-
-window.addEventListener("lcw:onMessageSent", (e) => {
-
-    if (currentValidationField !== "Global.clientPreferredName") {
-        return;
+        currentValidationField = "Global.clientPreferredName";
+        startSendBlockerWatcher();
     }
 
-    const message = e?.detail?.text || "";
-
-    if (message.length > 35) {
-
-        alert("Please enter 35 characters or fewer.");
-
-        // Optional:
-        console.warn("Character limit exceeded");
-
-        // We cannot truly cancel LCW send here reliably,
-        // but we can immediately notify and re-ask via Copilot validation.
+    if (text.includes("how old are you")) {
+        currentValidationField = null;
     }
-
 });
