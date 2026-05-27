@@ -371,7 +371,7 @@ window.addEventListener("khl:chatClosed", (e) => {
 });
 
 // =====================================================
-// Prevent sending Preferred Name if over 35 characters
+// HARD BLOCK SEND BEFORE MESSAGE REACHES BOT
 // =====================================================
 
 const KHL_LIMITS = {
@@ -379,122 +379,117 @@ const KHL_LIMITS = {
 };
 
 let currentValidationField = null;
+let khlSendInterceptorAttached = false;
 
-function getChatIframeDocument() {
-    const iframe = document.querySelector("#Microsoft_Omnichannel_LCWidget_Chat_Iframe_Window");
+function attachSendInterceptor() {
 
-    if (!iframe) return null;
-
-    try {
-        return iframe.contentDocument || iframe.contentWindow?.document;
-    } catch (e) {
-        console.warn("Cannot access LCW iframe document", e);
-        return null;
+    if (khlSendInterceptorAttached) {
+        return;
     }
-}
 
-function getMessageText(doc) {
-    const possibleInputs = [
-        ...doc.querySelectorAll("textarea"),
-        ...doc.querySelectorAll('[contenteditable="true"]'),
-        ...doc.querySelectorAll('[role="textbox"]'),
-        ...doc.querySelectorAll("input")
-    ];
+    const sdk = window.Microsoft?.Omnichannel?.LiveChatWidget?.SDK;
 
-    for (const el of possibleInputs) {
-        const value = el.value || el.innerText || el.textContent || "";
+    if (!sdk) {
+        console.warn("LCW SDK not available");
+        return;
+    }
 
-        if (value.trim()) {
-            return value.trim();
+    // Find internal send function
+    const originalSendMessage =
+        sdk.sendMessage ||
+        sdk.postMessage ||
+        sdk._sendMessage;
+
+    if (!originalSendMessage) {
+        console.warn("Could not find SDK send method");
+        return;
+    }
+
+    console.log("LCW send interceptor attached");
+
+    const interceptedSend = function (...args) {
+
+        let messageText = "";
+
+        try {
+
+            const firstArg = args[0];
+
+            if (typeof firstArg === "string") {
+                messageText = firstArg;
+            }
+            else if (firstArg?.text) {
+                messageText = firstArg.text;
+            }
+            else if (firstArg?.message) {
+                messageText = firstArg.message;
+            }
+
+        } catch (e) {
+            console.warn("Could not inspect outgoing message", e);
         }
-    }
 
-    return "";
-}
+        console.log("Outgoing message:", messageText);
 
-function isPreferredNameTooLong(doc) {
-    if (currentValidationField !== "Global.clientPreferredName") return false;
+        // =====================================================
+        // Preferred Name Validation
+        // =====================================================
 
-    const message = getMessageText(doc);
-    return message.length > KHL_LIMITS.preferredName;
-}
+        if (
+            currentValidationField === "Global.clientPreferredName" &&
+            messageText.length > KHL_LIMITS.preferredName
+        ) {
 
-function blockSendIfInvalid(e) {
-    const doc = getChatIframeDocument();
+            alert("Please enter 35 characters or fewer.");
 
-    if (!doc) return;
+            console.warn("Blocked outgoing message");
 
-    if (isPreferredNameTooLong(doc)) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        alert("Please enter 35 characters or fewer.");
-        return false;
-    }
-}
-
-function attachLcwSendBlocker() {
-    const doc = getChatIframeDocument();
-
-    if (!doc) {
-        console.warn("LCW iframe document not ready");
-        return false;
-    }
-
-    if (doc.body?.dataset.khlSendBlockerAttached === "true") {
-        return true;
-    }
-
-    doc.body.dataset.khlSendBlockerAttached = "true";
-
-    // Block Enter key send
-    doc.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            blockSendIfInvalid(e);
+            return Promise.resolve(false);
         }
-    }, true);
 
-    // Block send button click
-    doc.addEventListener("click", (e) => {
-        const target = e.target;
+        return originalSendMessage.apply(sdk, args);
+    };
 
-        const isSendButton =
-            target.closest("button") ||
-            target.closest('[role="button"]') ||
-            target.closest('[aria-label*="Send"]') ||
-            target.closest('[title*="Send"]');
+    if (sdk.sendMessage) {
+        sdk.sendMessage = interceptedSend;
+    }
 
-        if (isSendButton) {
-            blockSendIfInvalid(e);
-        }
-    }, true);
+    if (sdk.postMessage) {
+        sdk.postMessage = interceptedSend;
+    }
 
-    console.log("LCW send blocker attached");
-    return true;
+    if (sdk._sendMessage) {
+        sdk._sendMessage = interceptedSend;
+    }
+
+    khlSendInterceptorAttached = true;
 }
 
-function startSendBlockerWatcher() {
-    const interval = setInterval(() => {
-        const attached = attachLcwSendBlocker();
+window.addEventListener("khl:lcwReady", () => {
 
-        if (attached) {
-            clearInterval(interval);
-        }
-    }, 500);
+    setTimeout(() => {
+        attachSendInterceptor();
+    }, 3000);
 
-    setTimeout(() => clearInterval(interval), 10000);
-}
+});
 
 window.addEventListener("lcw:onMessageReceived", (e) => {
+
     const text = (e?.detail?.text || "").toLowerCase();
 
+    console.log("Bot message:", text);
+
     if (text.includes("what should we call you")) {
+
         currentValidationField = "Global.clientPreferredName";
-        startSendBlockerWatcher();
+
+        console.log("Preferred Name validation active");
     }
 
     if (text.includes("how old are you")) {
+
         currentValidationField = null;
+
+        console.log("Preferred Name validation cleared");
     }
 });
