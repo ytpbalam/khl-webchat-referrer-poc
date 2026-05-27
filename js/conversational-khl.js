@@ -369,3 +369,41 @@ window.addEventListener("khl:chatClosed", (e) => {
     if (e?.detail?.widgetType !== "conversational") return;
     document.body.classList.remove("lcw-hidden");
 });
+
+// =====================================================
+// Conversational KHL - LCW / Copilot Event Logger
+// Use this first to inspect events before applying rules
+// =====================================================
+
+window.KHLConversationDebug = true;
+
+function logConversationalEvent(eventName, e) {
+    if (!window.KHLConversationDebug) return;
+
+    const detail = e?.detail || {};
+
+    console.group(`[KHL Conversational Event] ${eventName}`);
+    console.log("Full event:", e);
+    console.log("Detail:", detail);
+    console.log("Text:", detail?.text);
+    console.log("Message type:", e?.msgType || detail?.messageType);
+    console.log("Tags:", e?.tags || detail?.tags || detail?.channelData?.tags);
+    console.log("Channel data:", detail?.channelData);
+    console.groupEnd();
+}
+
+[
+    "lcw:ready",
+    "lcw:startChat",
+    "lcw:onMessageReceived",
+    "lcw:onMessageSent",
+    "lcw:onMinimize",
+    "lcw:onMaximize",
+    "lcw:onClose",
+    "lcw:closeChat",
+    "lcw:chatClosed"
+].forEach((eventName) => {
+    window.addEventListener(eventName, (e) => {
+        logConversationalEvent(eventName, e);
+    });
+});
