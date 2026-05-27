@@ -420,31 +420,58 @@ let currentValidationField = null;
 
 function applyTextareaLimit(maxLength) {
 
-    const textarea =
+    const input =
         document.querySelector("textarea") ||
-        document.querySelector('[contenteditable="true"]');
+        document.querySelector('[contenteditable="true"]') ||
+        document.querySelector('[role="textbox"]');
 
-    if (!textarea) {
-        console.warn("No chat input found");
+    if (!input) {
+        console.warn("No LCW input found");
         return false;
     }
 
-    textarea.setAttribute("maxlength", maxLength);
+    console.log("LCW input found:", input);
+    console.log("INPUT HTML:", input.outerHTML);
 
-    textarea.addEventListener("input", () => {
+    // textarea support
+    if (input.tagName === "TEXTAREA") {
 
-        if (textarea.value && textarea.value.length > maxLength) {
-            textarea.value = textarea.value.substring(0, maxLength);
-        }
+        input.setAttribute("maxlength", maxLength);
 
-        // contenteditable support
-        if (textarea.innerText && textarea.innerText.length > maxLength) {
-            textarea.innerText =
-                textarea.innerText.substring(0, maxLength);
-        }
+        input.addEventListener("input", () => {
+            if (input.value.length > maxLength) {
+                input.value = input.value.substring(0, maxLength);
+            }
+        });
 
-    });
+    }
+    else {
 
+        // contenteditable / role=textbox support
+        input.addEventListener("input", () => {
+
+            let text = input.innerText || input.textContent || "";
+
+            if (text.length > maxLength) {
+
+                text = text.substring(0, maxLength);
+
+                input.innerText = text;
+
+                // move cursor to end
+                const range = document.createRange();
+                const sel = window.getSelection();
+
+                range.selectNodeContents(input);
+                range.collapse(false);
+
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+
+        });
+    }
+    console.log("INPUT HTML:", input.outerHTML);
     console.log(`Character limit applied: ${maxLength}`);
 
     return true;
