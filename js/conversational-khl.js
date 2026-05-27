@@ -546,3 +546,24 @@ window.addEventListener("lcw:onMessageReceived", (e) => {
         );
     }
 });
+
+window.addEventListener("lcw:onMessageSent", (e) => {
+
+    if (currentValidationField !== "Global.clientPreferredName") {
+        return;
+    }
+
+    const message = e?.detail?.text || "";
+
+    if (message.length > 35) {
+
+        alert("Please enter 35 characters or fewer.");
+
+        // Optional:
+        console.warn("Character limit exceeded");
+
+        // We cannot truly cancel LCW send here reliably,
+        // but we can immediately notify and re-ask via Copilot validation.
+    }
+
+});
