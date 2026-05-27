@@ -380,15 +380,53 @@ const KHL_LIMITS = {
 
 let currentValidationField = null;
 
+function isVisibleElement(el) {
+    if (!el) return false;
+
+    const rect = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+
+    return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        style.opacity !== "0"
+    );
+}
+
+function isWebAppFormField(el) {
+    if (!el) return true;
+
+    return (
+        el.id === "name" ||
+        el.classList.contains("khl-control") ||
+        !!el.closest("#webappSection") ||
+        !!el.closest("#selectionSection")
+    );
+}
+
 function findLcwInputInDocument(doc) {
     if (!doc) return null;
 
-    return (
-        doc.querySelector("textarea") ||
-        doc.querySelector('[contenteditable="true"]') ||
-        doc.querySelector('[role="textbox"]') ||
-        doc.querySelector('input[type="text"]')
-    );
+    const candidates = [
+        ...doc.querySelectorAll("textarea"),
+        ...doc.querySelectorAll('[contenteditable="true"]'),
+        ...doc.querySelectorAll('[role="textbox"]'),
+        ...doc.querySelectorAll('input[placeholder*="Type your message"]'),
+        ...doc.querySelectorAll('input[type="text"]')
+    ];
+
+    const validCandidates = candidates.filter((el) => {
+        if (!isVisibleElement(el)) return false;
+        if (isWebAppFormField(el)) return false;
+
+        return true;
+    });
+
+    console.log("LCW input candidates:", validCandidates);
+
+    return validCandidates[0] || null;
 }
 
 function findLcwInput() {
@@ -427,11 +465,11 @@ function applyTextareaLimit(maxLength) {
     const input = findLcwInput();
 
     if (!input) {
-        console.warn("No LCW input found");
+        console.warn("No LCW message input found");
         return false;
     }
 
-    console.log("LCW input found:", input);
+    console.log("LCW message input found:", input);
     console.log("INPUT HTML:", input.outerHTML);
 
     if (input.dataset.khlLimitApplied === String(maxLength)) {
@@ -444,8 +482,11 @@ function applyTextareaLimit(maxLength) {
         input.setAttribute("maxlength", maxLength);
 
         input.addEventListener("input", () => {
-            if (input.value.length > maxLength) {
+            if (input.value && input.value.length > maxLength) {
                 input.value = input.value.substring(0, maxLength);
+
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.dispatchEvent(new Event("change", { bubbles: true }));
             }
         });
     } else {
@@ -464,11 +505,14 @@ function applyTextareaLimit(maxLength) {
 
                 sel.removeAllRanges();
                 sel.addRange(range);
+
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.dispatchEvent(new Event("change", { bubbles: true }));
             }
         });
     }
 
-    console.log(`Character limit applied: ${maxLength}`);
+    console.log(`Character limit applied to LCW message box: ${maxLength}`);
     return true;
 }
 
