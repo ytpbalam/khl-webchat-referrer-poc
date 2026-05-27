@@ -407,3 +407,87 @@ function logConversationalEvent(eventName, e) {
         logConversationalEvent(eventName, e);
     });
 });
+
+// =====================================================
+// Conversational KHL - Name Character Limit
+// =====================================================
+
+const KHL_LIMITS = {
+    preferredName: 35
+};
+
+let currentValidationField = null;
+
+function applyTextareaLimit(maxLength) {
+
+    const textarea =
+        document.querySelector("textarea") ||
+        document.querySelector('[contenteditable="true"]');
+
+    if (!textarea) {
+        console.warn("No chat input found");
+        return false;
+    }
+
+    textarea.setAttribute("maxlength", maxLength);
+
+    textarea.addEventListener("input", () => {
+
+        if (textarea.value && textarea.value.length > maxLength) {
+            textarea.value = textarea.value.substring(0, maxLength);
+        }
+
+        // contenteditable support
+        if (textarea.innerText && textarea.innerText.length > maxLength) {
+            textarea.innerText =
+                textarea.innerText.substring(0, maxLength);
+        }
+
+    });
+
+    console.log(`Character limit applied: ${maxLength}`);
+
+    return true;
+}
+
+function startValidationWatcher(fieldName, maxLength) {
+
+    currentValidationField = fieldName;
+
+    const retryInterval = setInterval(() => {
+
+        const applied = applyTextareaLimit(maxLength);
+
+        if (applied) {
+            clearInterval(retryInterval);
+        }
+
+    }, 500);
+
+    // safety cleanup
+    setTimeout(() => {
+        clearInterval(retryInterval);
+    }, 10000);
+}
+
+
+window.addEventListener("lcw:onMessageReceived", (e) => {
+
+    const text = (e?.detail?.text || "").toLowerCase();
+
+    console.log("Bot message:", text);
+
+    // Preferred Name Question
+    if (
+        text.includes("what should we call you")
+    ) {
+
+        console.log("Applying Preferred Name validation");
+
+        startValidationWatcher(
+            "Global.clientPreferredName",
+            KHL_LIMITS.preferredName
+        );
+    }
+
+});
